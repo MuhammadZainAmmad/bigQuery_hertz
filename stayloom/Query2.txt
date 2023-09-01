@@ -1,0 +1,103 @@
+-- ============================================= CTEs for creating reviews table ===============================================
+
+-- CREATE OR REPLACE TABLE stayloom.reviews.t_reviews AS
+  With 
+  listing_df as (
+  SELECT 
+    Guesty_Nickname as listing_nickname, 
+    Market as market
+  FROM stayloom.reviews.t_listing_dictionary
+),
+reservations_new as (
+  select 
+    id,
+    listing_nickname,
+    confirmation_code,
+    status,
+    guest_full_name,
+    check_in,
+    check_out
+
+  from stayloom.guesty.t_reservations 
+  where source like "%bnb%" and created_at >= "2019-01-01"
+), unique_confirmation_codes as (
+
+  SELECT confirmation_code
+  FROM reservations_new
+  GROUP BY 1
+),
+enrich_reservations  as (
+  SELECT 
+    r.id,
+    r.listing_nickname,
+    r.confirmation_code,
+    r.status,
+    r.guest_full_name,
+    r.check_in,
+    r.check_out,
+    l.market,
+  FROM reservations_new r
+  LEFT JOIN listing_df l ON r.listing_nickname = l.listing_nickname
+  GROUP BY 1,2,3,4,5,6,7,8,9
+),
+review_df as (
+  SELECT 
+    JSON_EXTRACT_SCALAR(review_data, "$._id") as review_id,
+    JSON_EXTRACT_SCALAR(review_data, "$.reservationId") as review_reservation,
+    JSON_EXTRACT_SCALAR(review_data, "$.guestId") as guest_id,
+    JSON_EXTRACT_SCALAR(review_data, "$.listingId") as listing_id,
+    JSON_EXTRACT_SCALAR(review_data, "$.createdAt") as created_at,
+    JSON_EXTRACT_SCALAR(review_data, "$.createdAtGuesty") as created_at_guesty,
+    JSON_EXTRACT_SCALAR(review_data, "$.updatedAt") as updated_at,
+    JSON_EXTRACT_SCALAR(review_data, "$.updatedAtGuesty") as updated_at_guesty,
+    JSON_EXTRACT_SCALAR(review_data, "$.public_review") as public_review,
+    JSON_EXTRACT_SCALAR(review_data, "$.private_feedback") as private_feedback,
+    JSON_EXTRACT_SCALAR(review_data, "$.overall_rating") as overall_rating,
+    JSON_EXTRACT_SCALAR(review_data, "$.reviewee_response") as reviewee_response,
+    CASE 
+      WHEN JSON_EXTRACT_SCALAR(review_data, "$.reviewee_response") is null THEN 'no' ELSE 'yes' 
+    END as is_replied,
+    JSON_EXTRACT(review_data, "$.category_ratings") as category_ratings,
+    JSON_EXTRACT_SCALAR(review_data, "$.category_ratings_location") as location_rating,
+    JSON_EXTRACT_SCALAR(review_data, "$.category_ratings_cleanliness") as cleanliness_rating,
+    JSON_EXTRACT_SCALAR(review_data, "$.category_ratings_value") as value_rating,
+    JSON_EXTRACT_SCALAR(review_data, "$.category_ratings_accuracy") as accuracy_rating,
+    JSON_EXTRACT_SCALAR(review_data, "$.category_ratings_communication") as comm_rating,
+    JSON_EXTRACT_SCALAR(review_data, "$.category_ratings_checkin") as check_in_rating
+  
+FROM stayloom.reviews.raw_reviews
+), final_tab as (
+
+  SELECT *
+  FROM review_df r
+  LEFT JOIN enrich_reservations er
+  ON r.review_reservation = er.id
+)
+
+SELECT 
+  review_id,
+  review_reservation,
+  listing_id,
+  created_at,
+  created_at_guesty,
+  updated_at,
+  updated_at_guesty,
+  public_review,          
+  private_feedback as private_review,
+  overall_rating,
+  location_rating,
+  cleanliness_rating,
+  value_rating,
+  accuracy_rating,
+  comm_rating as communication_rating,
+  check_in_rating as checkin_rating,
+  is_replied,
+  listing_nickname,         
+  confirmation_code,
+  status,         
+  guest_full_name,
+  check_in,
+  check_out,
+  market,
+  parent_external_id,
+FROM final_tab
