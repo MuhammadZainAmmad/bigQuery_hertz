@@ -1,0 +1,15 @@
+-- ======================= previously mapped all child reviews to latest parent version but now mapping to correct parent version =================
+
+SELECT Nickname_Input, Guesty_Nickname, Date_of_Creation, next_version_date_of_creation, created_at, listing_nickname
+FROM 
+  (SELECT Nickname_Input, Guesty_Nickname, Date_of_Creation, 
+      LEAD(Date_of_Creation) OVER (PARTITION BY Nickname_Input ORDER BY Date_of_Creation) 
+      AS next_version_date_of_creation
+  FROM `Listings.t_listing_dictionary`) lisitings
+JOIN 
+  (SELECT * 
+  FROM `reviews.t_reviews` 
+  WHERE parent_external_id IS NOT NULL) reviews
+ON TIMESTAMP(created_at) > TIMESTAMP(lisitings.Date_of_Creation) AND TIMESTAMP(created_at) < TIMESTAMP(next_version_date_of_creation) AND Guesty_Nickname = listing_nickname
+
+
