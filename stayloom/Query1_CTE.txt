@@ -1,0 +1,15 @@
+-- ======================================= CTE version of query 1 ===================================
+
+with
+parent_listings as (SELECT * FROM Listings.t_listing_dictionary WHERE MU_Parent_Listing_=TRUE AND Listied_on_any_channels_ = TRUE),
+child_listings as (SELECT * FROM Listings.t_listing_dictionary WHERE MU_Parent_Listing_=FALSE AND Parent_Multiunit_Nickname_Input IS NOT NULL)
+SELECT
+  parent.Guesty_Nickname AS Parent_Guesty_Nickname,
+  parent.External_ID AS Parent_External_ID,
+  child.Guesty_Nickname AS Child_Guesty_Nickname,
+FROM
+  child_listings child
+INNER JOIN
+  parent_listings parent
+ON
+  child.Parent_Multiunit_Nickname_Input = parent.Nickname_Input
