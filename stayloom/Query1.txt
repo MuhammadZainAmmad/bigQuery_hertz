@@ -1,0 +1,38 @@
+-- ====================================== Analysing listings table to find parent child relationships between listings ============================
+
+-- SELECT Listing_Internal_ID, Parent_Multiunit_Nickname_Input, MU_Parent_Listing_, Guesty_Nickname
+-- FROM `Listings.t_listing_dictionary`
+-- WHERE MU_Parent_Listing_ = true and Parent_Multiunit_Nickname_Input IS NOT NULL
+
+-- SELECT Listing_Internal_ID,Unit_ID,Nickname_Input,Version_Input, Guesty_Nickname, Parent_Multiunit_Nickname_Input, MU_Parent_Listing_, 
+-- Combo_Listing_, Combined_Listing_Address
+-- FROM `Listings.t_listing_dictionary`
+-- WHERE Parent_Multiunit_Nickname_Input IS NOT NULL AND MU_Parent_Listing_ = true;
+
+-- SELECT DISTINCT Parent_Multiunit_Nickname_Input
+-- FROM `Listings.t_listing_dictionary`;
+
+-- SELECT Parent_Multiunit_Nickname_Input, COUNT(*)
+-- FROM `Listings.t_listing_dictionary`
+-- GROUP BY Parent_Multiunit_Nickname_Input;
+
+-- SELECT Parent_Multiunit_Nickname_Input, Guesty_Nickname
+-- FROM `Listings.t_listing_dictionary`
+-- WHERE Guesty_Nickname LIKE '%Hyde%';
+
+-- SELECT Nickname_Input, COUNT(*)
+-- FROM `Listings.t_listing_dictionary`
+-- GROUP BY Nickname_Input
+
+-- SELECT *
+-- FROM `Listings.t_listing_dictionary`
+-- WHERE Nickname_Input = '23 Linwood 1';
+
+SELECT parent.External_ID AS Parent_External_ID, 
+      child.External_ID AS Child_External_ID, 
+      parent.Guesty_Nickname AS Parent_Guesty_Nickname, 
+      child.Guesty_Nickname AS Child_Guesty_Nickname
+FROM `Listings.t_listing_dictionary` parent
+JOIN `Listings.t_listing_dictionary` child
+ON parent.Nickname_Input = child.Parent_Multiunit_Nickname_Input
+WHERE parent.Listied_on_any_channels_ = true AND child.MU_Parent_Listing_ = false AND parent.MU_Parent_Listing_ = true;
